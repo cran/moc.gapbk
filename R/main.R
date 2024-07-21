@@ -1,10 +1,10 @@
 #Para evitar que de una NOTE en pathrelinking con variable i
-utils::globalVariables(c("i"))
+#utils::globalVariables(c("i"))
 
 
 generate.initial.population<-function(num_objects, num_k, pop_size){
   population.P = t(sapply(1:pop_size, function(x)  sample(1:num_objects, num_k ,replace=F)  ))
-  rm(.Random.seed, envir=globalenv())
+  #rm(.Random.seed, envir=globalenv())
   return(as.matrix(population.P))
 }
 
@@ -711,6 +711,8 @@ generate.path.relinking<-function(population_mejorar, num_k, dmatrix1, dmatrix2,
       invisible(rbind) ## Para solucionar problema de consumo excesivo de memoria . rbind is referenced and thus exported to workers
       # for (i in 1:nrow(pares)) {
       #paralelismo
+
+      i <- i  # Dummy assignment to avoid NOTE about i
       soluciones_path<-data.frame()
 
       s_initial=population_mejorar[pares[i,1],1:num_k]
@@ -953,6 +955,7 @@ generate.results<-function(num_k, dmatrix1, dmatrix2, pop_size, generation, rat_
 #' @import doMPI
 #' @import doSNOW
 #' @import parallel
+#' @import amap
 #'
 #' @examples
 #'
@@ -961,7 +964,7 @@ generate.results<-function(num_k, dmatrix1, dmatrix2, pop_size, generation, rat_
 #' library("amap")
 #' library("moc.gapbk")
 #'
-#' x <- matrix(runif(100*20, min = -5, max = 10), nrow=50, ncol=20)
+#' x <- matrix(runif(50 * 20, min = -5, max = 10), nrow = 50, ncol = 20)
 #'
 #' ##Compute two distance matrices
 #'

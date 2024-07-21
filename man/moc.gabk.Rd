@@ -4,9 +4,19 @@
 \alias{moc.gabk}
 \title{Perform the Multi-Objective Clustering Algorithm Guided by a-Priori Biological Knowledge (MOC-GaPBK)}
 \usage{
-moc.gabk(dmatrix1, dmatrix2, num_k, generation = 50, pop_size = 10,
-  rat_cross = 0.8, rat_muta = 0.01, tour_size = 2,
-  neighborhood = 0.1, local_search = FALSE, cores = 2)
+moc.gabk(
+  dmatrix1,
+  dmatrix2,
+  num_k,
+  generation = 50,
+  pop_size = 10,
+  rat_cross = 0.8,
+  rat_muta = 0.01,
+  tour_size = 2,
+  neighborhood = 0.1,
+  local_search = FALSE,
+  cores = 2
+)
 }
 \arguments{
 \item{dmatrix1}{A distance matrix. It should have the same dimensions that dmatrix2. It is mandatory.}
@@ -49,7 +59,7 @@ MOC-GaPBK is a method proposes by Parraga-Alava, J. et. al. 2018. It carries out
 library("amap")
 library("moc.gapbk")
 
-x <- matrix(runif(100*20, min = -5, max = 10), nrow=50, ncol=20)
+x <- matrix(runif(50 * 20, min = -5, max = 10), nrow = 50, ncol = 20)
 
 ##Compute two distance matrices
 
