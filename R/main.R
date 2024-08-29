@@ -647,6 +647,7 @@ generate.pareto.local.search<-function(population_pareto, neighborhood, num_k, n
 
 generate.path.relinking<-function(population_mejorar, num_k, dmatrix1, dmatrix2, number.objectives, cores){
 
+ i <- NULL
 
   #population_mejorar=population.pareto
   #genero cada para de solucion pareto a las que les aplicare path-relink
@@ -711,8 +712,6 @@ generate.path.relinking<-function(population_mejorar, num_k, dmatrix1, dmatrix2,
       invisible(rbind) ## Para solucionar problema de consumo excesivo de memoria . rbind is referenced and thus exported to workers
       # for (i in 1:nrow(pares)) {
       #paralelismo
-
-      i <- i  # Dummy assignment to avoid NOTE about i
       soluciones_path<-data.frame()
 
       s_initial=population_mejorar[pares[i,1],1:num_k]
@@ -1000,96 +999,96 @@ moc.gabk<-function(dmatrix1, dmatrix2, num_k,
 
           if(neighborhood>=0 & neighborhood<=1){
 
-          #Set parameters
-          num_objects=nrow(dmatrix1)
-          number.objectives=2
+            #Set parameters
+            num_objects=nrow(dmatrix1)
+            number.objectives=2
 
-          #Initialization
-          population.P=generate.initial.population(nrow(dmatrix1), num_k, pop_size)
+            #Initialization
+            population.P=generate.initial.population(nrow(dmatrix1), num_k, pop_size)
 
-          g=1
+            g=1
 
-          while (g<=generation) {
-            # Population P
-            verify.singletons.P<- singletons.repair(population.P, dmatrix1, dmatrix2, num_objects)
-            table.groups.P<- verify.singletons.P[[1]] #1 corresponde al primer argumento devuelto y corresponde a groups formados
-            population.P<- as.matrix(verify.singletons.P[[2]]) #1 corresponde al segundo argumento ... es la poblacion sin singletons
-            population.P<- calculate.ranking.crowding(pop_size, population.P, table.groups.P, number.objectives, FALSE, dmatrix1, dmatrix2, num_k)
-            #selection
-            mating.pool <- nsga2R::tournamentSelection(population.P, pop_size, tour_size)
-            population.Q <- t(sapply(1:pop_size, function(u) array(rep(0,num_k))))
-            #crossover
-            crossover <-generate.crossover.k.points(pop_size,num_k, mating.pool, population.Q, rat_cross)
-            population.Q<-verify.feasibility(crossover,population.Q, num_objects)
-            #mutation
-            mutation <-generate.mutation.random.controller(pop_size, num_k, population.Q, rat_muta, num_objects)
-            population.Q<-verify.feasibility(mutation, population.Q, num_objects)
-            # Population Q
-            verify.singletons.Q<-singletons.repair(population.Q, dmatrix1, dmatrix2, num_objects)
-            table.groups.Q<-verify.singletons.Q[[1]]
-            population.Q<- as.matrix(verify.singletons.Q[[2]])
-            population.Q<-calculate.ranking.crowding(pop_size, population.Q, table.groups.Q, number.objectives, FALSE, dmatrix1, dmatrix2, num_k)
-            # Population R
-            #como P y Q han sido corregidas para no tener singletons, ya no debo verificar eso en poblacion R, ya que es la union de ambas
-            population.R <- rbind(population.P, population.Q)
-            rownames(population.R)<-1:nrow(population.R)
+            while (g<=generation) {
+              # Population P
+              verify.singletons.P<- singletons.repair(population.P, dmatrix1, dmatrix2, num_objects)
+              table.groups.P<- verify.singletons.P[[1]] #1 corresponde al primer argumento devuelto y corresponde a groups formados
+              population.P<- as.matrix(verify.singletons.P[[2]]) #1 corresponde al segundo argumento ... es la poblacion sin singletons
+              population.P<- calculate.ranking.crowding(pop_size, population.P, table.groups.P, number.objectives, FALSE, dmatrix1, dmatrix2, num_k)
+              #selection
+              mating.pool <- nsga2R::tournamentSelection(population.P, pop_size, tour_size)
+              population.Q <- t(sapply(1:pop_size, function(u) array(rep(0,num_k))))
+              #crossover
+              crossover <-generate.crossover.k.points(pop_size,num_k, mating.pool, population.Q, rat_cross)
+              population.Q<-verify.feasibility(crossover,population.Q, num_objects)
+              #mutation
+              mutation <-generate.mutation.random.controller(pop_size, num_k, population.Q, rat_muta, num_objects)
+              population.Q<-verify.feasibility(mutation, population.Q, num_objects)
+              # Population Q
+              verify.singletons.Q<-singletons.repair(population.Q, dmatrix1, dmatrix2, num_objects)
+              table.groups.Q<-verify.singletons.Q[[1]]
+              population.Q<- as.matrix(verify.singletons.Q[[2]])
+              population.Q<-calculate.ranking.crowding(pop_size, population.Q, table.groups.Q, number.objectives, FALSE, dmatrix1, dmatrix2, num_k)
+              # Population R
+              #como P y Q han sido corregidas para no tener singletons, ya no debo verificar eso en poblacion R, ya que es la union de ambas
+              population.R <- rbind(population.P, population.Q)
+              rownames(population.R)<-1:nrow(population.R)
 
-            population.R<-population.R[, -((num_k+1):(num_k+number.objectives+2))] #deja solo cromosomas, sea quita objetivos, Jerarq y crowding
+              population.R<-population.R[, -((num_k+1):(num_k+number.objectives+2))] #deja solo cromosomas, sea quita objetivos, Jerarq y crowding
 
-            #recalcula Jerarquia Pareto y crowding en poblacion R
-            table.groups.R<-generate.groups(nrow(population.R), population.R, dmatrix1, dmatrix2)
-            population.R<-calculate.ranking.crowding(pop_size*2, population.R, table.groups.R, number.objectives, FALSE, dmatrix1, dmatrix2, num_k)
-            population.R<-as.data.frame(population.R)
-            #Solo usa soluciones Pareto para las busqueda locales y para rellenar la poblacion.
-            population.pareto<-subset(population.R, population.R$paretoranking=='1')
-            population.pareto<-population.pareto[!duplicated(population.pareto[,1:(num_k)]),]
-            population.pareto<-population.R[!duplicated(population.R[,1:(num_k)]),]
-            #Quitar soluciones con singletons o con cluster sin genes.
-            table.groups.Pareto<-generate.groups(nrow(population.pareto), as.matrix(population.pareto[,1:num_k]), dmatrix1, dmatrix2)
-            arreglar<-singletons.delete(table.groups.Pareto, population.pareto, num_k)
-            population.pareto=arreglar[[2]]
-            population.R<-population.pareto
+              #recalcula Jerarquia Pareto y crowding en poblacion R
+              table.groups.R<-generate.groups(nrow(population.R), population.R, dmatrix1, dmatrix2)
+              population.R<-calculate.ranking.crowding(pop_size*2, population.R, table.groups.R, number.objectives, FALSE, dmatrix1, dmatrix2, num_k)
+              population.R<-as.data.frame(population.R)
+              #Solo usa soluciones Pareto para las busqueda locales y para rellenar la poblacion.
+              population.pareto<-subset(population.R, population.R$paretoranking=='1')
+              population.pareto<-population.pareto[!duplicated(population.pareto[,1:(num_k)]),]
+              population.pareto<-population.R[!duplicated(population.R[,1:(num_k)]),]
+              #Quitar soluciones con singletons o con cluster sin genes.
+              table.groups.Pareto<-generate.groups(nrow(population.pareto), as.matrix(population.pareto[,1:num_k]), dmatrix1, dmatrix2)
+              arreglar<-singletons.delete(table.groups.Pareto, population.pareto, num_k)
+              population.pareto=arreglar[[2]]
+              population.R<-population.pareto
 
-            if(local_search==TRUE){
-              #Path relinking
-              population.R<-generate.path.relinking(population.pareto, num_k, dmatrix1, dmatrix2, number.objectives, cores)#, lista_funciones, lista_paquetes, cores) #devuelve poblacion R pero solo  Paretos sin repeticiones
-              #Pareto Local Search
-              population.R<-generate.pareto.local.search(population.R, neighborhood, num_k, num_objects, pop_size,
-                                                         dmatrix1, dmatrix2, number.objectives) #Recibe solo Paretos (devueltos en population.R por PR) con Rnk y crowding
-            }
-
-            # Population P+1
-            #population.pareto=subset(population.R, population.R$paretoranking==1)
-            if(nrow(population.R)< pop_size) {
-              population.P<- as.matrix(population.R[,1:num_k])
-            }else{
-              population.P<- as.matrix(population.R[1:pop_size,1:num_k])
-            }
-
-            #Rellena poblacion con Pr
-            if(nrow(population.P)< pop_size){
-              population_random<-as.data.frame(t(sapply(1:pop_size, function(u) array(sample(1:num_objects, num_k, replace=F)))))
-              #por si acaso se prodyjeron singletons en la poblacion ramdom
-              reparar<-singletons.repair(as.matrix(population_random), dmatrix1, dmatrix2, num_objects)
-              population_random=reparar[[2]] #2 porq el primero son groups formados
-              #dejar sin cromosomas cromosomas repetidos
-              if(nrow(population.P)>1){
-                population.P<-population.P[!duplicated(population.P[,1:(num_k)]),]
-                population.P<-as.data.frame(population.P)
+              if(local_search==TRUE){
+                #Path relinking
+                population.R<-generate.path.relinking(population.pareto, num_k, dmatrix1, dmatrix2, number.objectives, cores)#, lista_funciones, lista_paquetes, cores) #devuelve poblacion R pero solo  Paretos sin repeticiones
+                #Pareto Local Search
+                population.R<-generate.pareto.local.search(population.R, neighborhood, num_k, num_objects, pop_size,
+                                                           dmatrix1, dmatrix2, number.objectives) #Recibe solo Paretos (devueltos en population.R por PR) con Rnk y crowding
               }
-              population.P<-rbind(population.P[,1:(num_k)], population_random[(nrow(population.P)+1):pop_size,])
-              rownames(population.P)<-c(1:nrow(population.P))
-              population.P<-as.matrix(population.P)
+
+              # Population P+1
+              #population.pareto=subset(population.R, population.R$paretoranking==1)
+              if(nrow(population.R)< pop_size) {
+                population.P<- as.matrix(population.R[,1:num_k])
+              }else{
+                population.P<- as.matrix(population.R[1:pop_size,1:num_k])
+              }
+
+              #Rellena poblacion con Pr
+              if(nrow(population.P)< pop_size){
+                population_random<-as.data.frame(t(sapply(1:pop_size, function(u) array(sample(1:num_objects, num_k, replace=F)))))
+                #por si acaso se prodyjeron singletons en la poblacion ramdom
+                reparar<-singletons.repair(as.matrix(population_random), dmatrix1, dmatrix2, num_objects)
+                population_random=reparar[[2]] #2 porq el primero son groups formados
+                #dejar sin cromosomas cromosomas repetidos
+                if(nrow(population.P)>1){
+                  population.P<-population.P[!duplicated(population.P[,1:(num_k)]),]
+                  population.P<-as.data.frame(population.P)
+                }
+                population.P<-rbind(population.P[,1:(num_k)], population_random[(nrow(population.P)+1):pop_size,])
+                rownames(population.P)<-c(1:nrow(population.P))
+                population.P<-as.matrix(population.P)
+              }
+
+
+              g=g+1
+
             }
 
+            results=generate.results(num_k, dmatrix1, dmatrix2, pop_size, generation, rat_cross, rat_muta, population.R)
 
-            g=g+1
-
-          }
-
-          results=generate.results(num_k, dmatrix1, dmatrix2, pop_size, generation, rat_cross, rat_muta, population.R)
-
-          return(results)
+            return(results)
 
 
           }else{
