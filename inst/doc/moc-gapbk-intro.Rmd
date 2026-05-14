@@ -1,0 +1,133 @@
+---
+title: "Getting started with moc.gapbk"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with moc.gapbk}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 6,
+  fig.height = 4
+)
+```
+
+## Overview
+
+The `moc.gapbk` package implements the **Multi-Objective Clustering
+Algorithm Guided by a-Priori Biological Knowledge** (MOC-GaPBK) proposed
+by Parraga-Alava and others (2018). The algorithm combines:
+
+* NSGA-II as the underlying multi-objective evolutionary engine,
+* Path-Relinking as an intensification strategy, and
+* Pareto Local Search as a diversification strategy.
+
+It receives two distance matrices and produces a set of non-dominated
+clustering solutions. The second matrix is typically used to encode
+a-priori biological knowledge (for example, semantic similarity
+between genes).
+
+## Basic usage
+
+```{r basic}
+library(moc.gapbk)
+
+set.seed(2025)
+
+# Toy data: 50 objects (e.g. genes) described by 20 features (e.g. samples).
+x <- matrix(stats::runif(50 * 20, min = -5, max = 10),
+            nrow = 50, ncol = 20)
+
+# Two distance matrices over the same set of objects.
+# Here we use amap if available (correlation distance is biologically
+# common), and fall back to base R otherwise so the vignette knits
+# under any configuration.
+if (requireNamespace("amap", quietly = TRUE)) {
+  d1 <- as.matrix(amap::Dist(x, method = "euclidean"))
+  d2 <- as.matrix(amap::Dist(x, method = "correlation"))
+} else {
+  d1 <- as.matrix(stats::dist(x, method = "euclidean"))
+  d2 <- as.matrix(stats::dist(x, method = "manhattan"))
+}
+
+res <- moc.gapbk(dmatrix1 = d1,
+                 dmatrix2 = d2,
+                 num_k = 3,
+                 generation = 5,
+                 pop_size = 6)
+```
+
+### Pareto-front population
+
+`res$population` contains the medoids that survived the last
+generation, together with the values of the two objective functions,
+the Pareto ranking and the crowding distance.
+
+```{r population}
+head(res$population)
+```
+
+### Cluster assignments per solution
+
+`res$matrix.solutions` is a data frame whose columns are the
+clustering assignments produced by each non-dominated solution.
+
+```{r matrix-solutions}
+head(res$matrix.solutions)
+```
+
+### Convenient per-solution vectors
+
+`res$clustering` exposes the same information as a list of named
+integer vectors, ready to be passed to validation indices, plotting
+helpers, etc.
+
+```{r clustering-vec}
+str(res$clustering[[1]])
+table(res$clustering[[1]])
+```
+
+## Enabling Path-Relinking and Pareto Local Search
+
+The full algorithm activates the intensification and diversification
+strategies through the `local_search` argument. Because Pareto Local
+Search has quadratic cost on the size of the Pareto front, this option
+is disabled by default in the vignette and the example below is shown
+but not evaluated.
+
+```{r local-search, eval = FALSE}
+res_full <- moc.gapbk(d1, d2,
+                      num_k = 3,
+                      generation = 10,
+                      pop_size = 10,
+                      local_search = TRUE,
+                      cores = 2)
+```
+
+## Tips for biological applications
+
+In bioinformatics workflows, `dmatrix1` is usually a distance derived
+from numerical expression profiles (for example, correlation or
+Euclidean distance on log-expression values), while `dmatrix2` is a
+distance derived from a-priori biological knowledge (for example,
+semantic similarity between Gene Ontology terms). The Xie-Beni
+validity index is computed independently on each matrix and acts as
+one of the two objective functions of the NSGA-II engine.
+
+## Backward compatibility
+
+Versions before 0.2.0 exported the function as `moc.gabk` (with a
+single `p`). That name is preserved as a deprecated alias and emits a
+warning; all new code should call `moc.gapbk` directly.
+
+## References
+
+Parraga-Alava, J., Dorn, M., Inostroza-Ponta, M. (2018). A
+multi-objective gene clustering algorithm guided by apriori biological
+knowledge with intensification and diversification strategies.
+*BioData Mining* 11(1), 1-16.
+<https://doi.org/10.1186/s13040-018-0178-4>
